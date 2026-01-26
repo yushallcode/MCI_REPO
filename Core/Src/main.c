@@ -84,32 +84,149 @@ void myPrintf1(const char *fmt, ...)
                     HAL_MAX_DELAY);
 }
 
-void myPrintf4(int a[2][2], int b[2][2])
-{
-myPrintf1("\r\n");
-myPrintf1("FUNCTION 4\r\n");
-int c[2][2];
-// Matrix multiplication
-int i, j, k;
-for ( i = 0; i < 2 ; i++)
-{
-for ( j = 0; j < 2; j++)
-{ c[i][j] = 0; for (k = 0; k < 2; k++)
-{ c[i][j] += a[i][k] * b[k][j]; }
-}
-myPrintf1("Matrix A:\r\n"); for (i=0; i < 2; i++)
-{ for ( j = 0 ; j < 2 ; j++)
-{ myPrintf1("%d", a[i][j]);
-} myPrintf1("\r\n");
-} myPrintf1("Matrix B:\r\n"); for ( i = 0; i < 2; i++)
-{
-for ( j = 0; j < 2; j++) { myPrintf1("%d", b[i][j]);
-} myPrintf1("\r\n");
-} myPrintf1("Matrix C:\r\n"); for (i = 0; i < 2; i++)
-{ for ( j = 0; j < 2; j++) { myPrintf1("%d", c[i][j]);
-} myPrintf1("\r\n");
-}   
+/////////////////////////////////////////////////////////////////
 
+void VerifySquareIdentity(void)
+{
+    int a, b;
+    int lhs, rhs;
+  
+    a = 7;
+    b = 4;
+  
+    lhs = (a + b) * (a + b);
+    rhs = a*a + 2*a*b + b*b;
+    
+    // Print results
+    myPrintf1("\r\n=== Verifying (a + b)² = a² + 2ab + b² ===\r\n");
+    myPrintf1("a     = %d\r\n", a);
+    myPrintf1("b     = %d\r\n", b);
+    myPrintf1("LHS   = (a + b)²     = %d\r\n", lhs);
+    myPrintf1("RHS   = a² + 2ab + b² = %d\r\n", rhs);
+    
+    if (lhs == rhs)
+    {
+        myPrintf1("→ Identity HOLDS ✓\r\n");
+    }
+    else
+    {
+        myPrintf1("→ Identity FAILED ✗\r\n");
+    }
+    
+    myPrintf1("----------------------------------------\r\n");
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void StringEncryptDecrypt(void)
+{
+    char original[] = "Microcontrollers";
+    int key = 10210;              //my hu id
+
+    char encrypted[sizeof(original)];
+    char decrypted[sizeof(original)];
+    
+    int len = strlen(original);
+    for (int i = 0; i < len; i++)
+    {
+        encrypted[i] = original[i] + (key % 256);
+    }
+    encrypted[len] = '\0';   // null-terminate
+
+    for (int i = 0; i < len; i++)
+    {
+        decrypted[i] = encrypted[i] - (key % 256);
+    }
+    decrypted[len] = '\0';
+    myPrintf1("\r\n=== Task 3: String Encryption / Decryption ===\r\n");
+    myPrintf1("Original string  : %s\r\n", original);
+    myPrintf1("Key used         : %d  (mod 256 = %d)\r\n", key, key % 256);
+    myPrintf1("Encrypted string : ");
+  
+    for (int i = 0; i < len; i++)
+    {
+        myPrintf1("%02X ", (unsigned char)encrypted[i]);
+    }
+    myPrintf1("  (%s)\r\n", encrypted);   // may look garbage — normal
+    
+    myPrintf1("Decrypted string : %s\r\n", decrypted);
+
+    if (strcmp(original, decrypted) == 0)
+    {
+        myPrintf1("→ Decryption SUCCESSFUL ✓  (strings match)\r\n");
+    }
+    else
+    {
+        myPrintf1("→ Decryption FAILED ✗\r\n");
+    }
+    
+    myPrintf1("----------------------------------------\r\n");
+}
+//////////////////////////////////////////////////////////////////////////////////////////
+void MatrixMultiplicationTask(void)
+{
+    int A[2][2] = {
+        {1, 2},
+        {3, 4}
+    };
+    int B[2][2] = {
+        {5, 6},
+        {7, 8}
+    };
+    int C[2][2] = {{0, 0}, {0, 0}};
+    for (int i = 0; i < 2; i++)        // rows of A / result
+    {
+        for (int j = 0; j < 2; j++)    // columns of B / result
+        {
+            for (int k = 0; k < 2; k++) // columns of A / rows of B
+            {
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+    myPrintf1("\r\n=== Task 4: 2x2 Matrix Multiplication ===\r\n");
+    
+    myPrintf1("Matrix A:\r\n");
+    myPrintf1("%d %d\r\n", A[0][0], A[0][1]);
+    myPrintf1("%d %d\r\n\r\n", A[1][0], A[1][1]);
+    
+    myPrintf1("Matrix B:\r\n");
+    myPrintf1("%d %d\r\n", B[0][0], B[0][1]);
+    myPrintf1("%d %d\r\n\r\n", B[1][0], B[1][1]);
+    
+    myPrintf1("Matrix C (A * B):\r\n");
+    myPrintf1("%d %d\r\n", C[0][0], C[0][1]);
+    myPrintf1("%d %d\r\n", C[1][0], C[1][1]);
+    
+    myPrintf1("----------------------------------------\r\n");
+}
+////////////////////////////////////////////////////////////////////////////////////////
+void FindArmstrongNumbers(void)
+{
+    myPrintf1("\r\nArmstrong Numbers between 100 and 999:\r\n");
+    
+    int count = 0;
+
+    for (int num = 100; num <= 999; num++)
+    {
+        int hundreds = num / 100;
+        int tens    = (num / 10) % 10;
+        int units   = num % 10;
+
+        int cube_sum = (hundreds * hundreds * hundreds) +
+                       (tens    * tens    * tens)    +
+                       (units   * units   * units);
+        
+        if (cube_sum == num)
+        {
+            myPrintf1("%d\r\n", num);
+            count++;
+        }
+    }
+
+    myPrintf1("\r\nTotal Armstrong numbers found: %d\r\n", count);
+    myPrintf1("----------------------------------------\r\n");
+}
 /* USER CODE END 0 */
 
 /**
@@ -153,13 +270,19 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-  int x = 42;
-  float y = 3.14;
-  myPrintf1("Value of x = %d, y = %.2f\r\n", x, y);
+  // int x = 42;
+  // float y = 3.14;
+  // myPrintf1("Value of x = %d, y = %.2f\r\n", x, y);
+  // VerifySquareIdentity();
+        
+  //       HAL_Delay(3000);
+  // StringEncryptDecrypt();
+  // HAL_Delay(4000);   
+  // MatrixMultiplicationTask();
+  // HAL_Delay(5000);   
+  FindArmstrongNumbers();
+  HAL_Delay(2000);
 
-  int A[2][2] = {{1, 2}, {3, 4}};
-  int B[2][2] = {{5, 6}, {7, 8}};
-  myPrintMat4(A, B);
 
     /* USER CODE END WHILE */
 
