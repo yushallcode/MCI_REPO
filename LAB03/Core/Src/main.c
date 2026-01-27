@@ -18,9 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "stdarg.h"
-#include "stdio.h"
-#include "string.h"
+#include <stdlib.h>
+#include <time.h>
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -34,6 +34,28 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define SEG_A_GPIO_Port GPIOD
+#define SEG_A_Pin GPIO_PIN_0
+
+#define SEG_B_GPIO_Port GPIOD
+#define SEG_B_Pin GPIO_PIN_1
+
+#define SEG_C_GPIO_Port GPIOD
+#define SEG_C_Pin GPIO_PIN_2
+
+#define SEG_D_GPIO_Port GPIOD
+#define SEG_D_Pin GPIO_PIN_3
+
+#define SEG_E_GPIO_Port GPIOD
+#define SEG_E_Pin GPIO_PIN_4
+
+#define SEG_F_GPIO_Port GPIOD
+#define SEG_F_Pin GPIO_PIN_5
+
+#define SEG_G_GPIO_Port GPIOD
+#define SEG_G_Pin GPIO_PIN_6
+
+#define ID_LEN (sizeof(student_id)/sizeof(student_id[0]))
 
 /* USER CODE END PD */
 
@@ -68,165 +90,52 @@ static void MX_USB_PCD_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/* Function to update the 7-segment display */
+uint8_t last_button = 0;
 
-void myPrintf1(const char *fmt, ...)
-{
-  char buffer[128];
-  va_list args;
+uint8_t counter = 0;
+uint8_t last_inc = 0;
+uint8_t last_dec = 0;
 
-  va_start(args, fmt);
-  vsnprintf(buffer, sizeof(buffer), fmt, args);
-  va_end(args);
 
-  HAL_UART_Transmit(&huart2,
-                    (uint8_t*)buffer,
-                    strlen(buffer),
-                    HAL_MAX_DELAY);
-}
+uint8_t student_id[] = {1,0,2,1,0};   // CHANGE THIS
+uint8_t index_id = 0;
+uint8_t button_last = 0;
 
-/////////////////////////////////////////////////////////////////
-
-void VerifySquareIdentity(void)
-{
-    int a, b;
-    int lhs, rhs;
-  
-    a = 7;
-    b = 4;
-  
-    lhs = (a + b) * (a + b);
-    rhs = a*a + 2*a*b + b*b;
-    
-    // Print results
-    myPrintf1("\r\n=== Verifying (a + b)² = a² + 2ab + b² ===\r\n");
-    myPrintf1("a     = %d\r\n", a);
-    myPrintf1("b     = %d\r\n", b);
-    myPrintf1("LHS   = (a + b)²     = %d\r\n", lhs);
-    myPrintf1("RHS   = a² + 2ab + b² = %d\r\n", rhs);
-    
-    if (lhs == rhs)
-    {
-        myPrintf1("→ Identity HOLDS ✓\r\n");
-    }
-    else
-    {
-        myPrintf1("→ Identity FAILED ✗\r\n");
-    }
-    
-    myPrintf1("----------------------------------------\r\n");
-}
-
-//////////////////////////////////////////////////////////////////////
-
-void StringEncryptDecrypt(void)
-{
-    char original[] = "Microcontrollers";
-    int key = 10210;              //my hu id
-
-    char encrypted[sizeof(original)];
-    char decrypted[sizeof(original)];
-    
-    int len = strlen(original);
-    for (int i = 0; i < len; i++)
-    {
-        encrypted[i] = original[i] + (key % 256);
-    }
-    encrypted[len] = '\0';   // null-terminate
-
-    for (int i = 0; i < len; i++)
-    {
-        decrypted[i] = encrypted[i] - (key % 256);
-    }
-    decrypted[len] = '\0';
-    myPrintf1("\r\n=== Task 3: String Encryption / Decryption ===\r\n");
-    myPrintf1("Original string  : %s\r\n", original);
-    myPrintf1("Key used         : %d  (mod 256 = %d)\r\n", key, key % 256);
-    myPrintf1("Encrypted string : ");
-  
-    for (int i = 0; i < len; i++)
-    {
-        myPrintf1("%02X ", (unsigned char)encrypted[i]);
-    }
-    myPrintf1("  (%s)\r\n", encrypted);   // may look garbage — normal
-    
-    myPrintf1("Decrypted string : %s\r\n", decrypted);
-
-    if (strcmp(original, decrypted) == 0)
-    {
-        myPrintf1("→ Decryption SUCCESSFUL ✓  (strings match)\r\n");
-    }
-    else
-    {
-        myPrintf1("→ Decryption FAILED ✗\r\n");
-    }
-    
-    myPrintf1("----------------------------------------\r\n");
-}
-//////////////////////////////////////////////////////////////////////////////////////////
-void MatrixMultiplicationTask(void)
-{
-    int A[2][2] = {
-        {1, 2},
-        {3, 4}
+void display_number(uint8_t num) {
+    static const uint8_t hex_patterns[16][7] = {
+        {0,1,1,1,1,1,1}, // 0
+        {0,0,0,0,1,1,0}, // 1
+        {1,0,1,1,0,1,1}, // 2
+        {1,0,0,1,1,1,1}, // 3
+        {1,1,0,0,1,1,0}, // 4
+        {1,1,0,1,1,0,1}, // 5
+        {1,1,1,1,1,0,1}, // 6
+        {0,0,0,0,1,1,1}, // 7
+        {1,1,1,1,1,1,1}, // 8
+        {1,1,0,1,1,1,1}, // 9
+        {1,1,1,0,1,1,1}, // A
+        {1,1,1,1,1,0,0}, // b
+        {0,1,1,1,0,0,1}, // C
+        {1,0,1,1,1,1,0}, // d
+        {1,1,1,1,0,0,1}, // E
+        {1,1,1,0,0,0,1}  // F
     };
-    int B[2][2] = {
-        {5, 6},
-        {7, 8}
-    };
-    int C[2][2] = {{0, 0}, {0, 0}};
-    for (int i = 0; i < 2; i++)        // rows of A / result
-    {
-        for (int j = 0; j < 2; j++)    // columns of B / result
-        {
-            for (int k = 0; k < 2; k++) // columns of A / rows of B
-            {
-                C[i][j] += A[i][k] * B[k][j];
-            }
-        }
-    }
-    myPrintf1("\r\n=== Task 4: 2x2 Matrix Multiplication ===\r\n");
-    
-    myPrintf1("Matrix A:\r\n");
-    myPrintf1("%d %d\r\n", A[0][0], A[0][1]);
-    myPrintf1("%d %d\r\n\r\n", A[1][0], A[1][1]);
-    
-    myPrintf1("Matrix B:\r\n");
-    myPrintf1("%d %d\r\n", B[0][0], B[0][1]);
-    myPrintf1("%d %d\r\n\r\n", B[1][0], B[1][1]);
-    
-    myPrintf1("Matrix C (A * B):\r\n");
-    myPrintf1("%d %d\r\n", C[0][0], C[0][1]);
-    myPrintf1("%d %d\r\n", C[1][0], C[1][1]);
-    
-    myPrintf1("----------------------------------------\r\n");
+
+    HAL_GPIO_WritePin(SEG_A_GPIO_Port, SEG_A_Pin, !hex_patterns[num][6]);
+    HAL_GPIO_WritePin(SEG_B_GPIO_Port, SEG_B_Pin, !hex_patterns[num][5]);
+    HAL_GPIO_WritePin(SEG_C_GPIO_Port, SEG_C_Pin, !hex_patterns[num][4]);
+    HAL_GPIO_WritePin(SEG_D_GPIO_Port, SEG_D_Pin, !hex_patterns[num][3]);
+    HAL_GPIO_WritePin(SEG_E_GPIO_Port, SEG_E_Pin, !hex_patterns[num][2]);
+    HAL_GPIO_WritePin(SEG_F_GPIO_Port, SEG_F_Pin, !hex_patterns[num][1]);
+    HAL_GPIO_WritePin(SEG_G_GPIO_Port, SEG_G_Pin, !hex_patterns[num][0]);
+
 }
-////////////////////////////////////////////////////////////////////////////////////////
-void FindArmstrongNumbers(void)
-{
-    myPrintf1("\r\nArmstrong Numbers between 100 and 999:\r\n");
-    
-    int count = 0;
 
-    for (int num = 100; num <= 999; num++)
-    {
-        int hundreds = num / 100;
-        int tens    = (num / 10) % 10;
-        int units   = num % 10;
 
-        int cube_sum = (hundreds * hundreds * hundreds) +
-                       (tens    * tens    * tens)    +
-                       (units   * units   * units);
-        
-        if (cube_sum == num)
-        {
-            myPrintf1("%d\r\n", num);
-            count++;
-        }
-    }
 
-    myPrintf1("\r\nTotal Armstrong numbers found: %d\r\n", count);
-    myPrintf1("----------------------------------------\r\n");
-}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -270,22 +179,54 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-  // int x = 42;
-  // float y = 3.14;
-  // myPrintf1("Value of x = %d, y = %.2f\r\n", x, y);
-  // VerifySquareIdentity();
-        
-  //       HAL_Delay(3000);
-  // StringEncryptDecrypt();
-  // HAL_Delay(4000);   
-  // MatrixMultiplicationTask();
-  // HAL_Delay(5000);   
-  FindArmstrongNumbers();
-  HAL_Delay(2000);
-
-
     /* USER CODE END WHILE */
+    // for (uint8_t i = 0; i < 16; i++) {
+    //     display_number(i);
+    //     HAL_Delay(2000);
+    // }
+    // uint8_t button_now = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
 
+    // if (button_now == GPIO_PIN_SET && button_last == GPIO_PIN_RESET)
+    // {
+    //     HAL_Delay(50); // debounce
+
+    //     display_number(student_id[index_id]);
+
+    //     index_id++;
+    //     if (index_id >= ID_LEN)
+    //         index_id = 0;
+    // }
+
+    // button_last = button_now;
+    // uint8_t inc_now = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
+    // uint8_t dec_now = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
+
+    // if (inc_now == GPIO_PIN_SET && last_inc == GPIO_PIN_RESET) {
+    //     HAL_Delay(50);
+    //     counter = (counter + 1) & 0x0F;
+    //     display_number(counter);
+    // }
+
+    // if (dec_now == GPIO_PIN_SET && last_dec == GPIO_PIN_RESET) {
+    //     HAL_Delay(50);
+    //     counter = (counter == 0) ? 15 : counter - 1;
+    //     display_number(counter);
+    // }
+
+    // last_inc = inc_now;
+    // last_dec = dec_now;
+    uint8_t btn = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
+
+    if (btn == GPIO_PIN_SET && last_button == GPIO_PIN_RESET)
+    {
+        HAL_Delay(40); // debounce
+
+        uint8_t dice = (rand() % 6) + 1;  // 1 to 6
+        display_number(dice);
+    }
+
+    last_button = btn;
+    
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -512,12 +453,17 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOE, CS_I2C_SPI_Pin|LD4_Pin|LD3_Pin|LD5_Pin
                           |LD7_Pin|LD9_Pin|LD10_Pin|LD8_Pin
                           |LD6_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : DRDY_Pin MEMS_INT3_Pin MEMS_INT4_Pin MEMS_INT1_Pin
                            MEMS_INT2_Pin */
@@ -543,6 +489,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PD0 PD1 PD2 PD3
+                           PD4 PD5 PD6 PD7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
