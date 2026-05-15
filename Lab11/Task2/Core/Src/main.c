@@ -138,6 +138,8 @@ volatile float shared_angle = 0.0f;
 volatile float shared_pid_output = 0.0f;
 volatile uint8_t display_flag = 0;
 volatile uint8_t shared_motor_cutoff = 0;
+volatile float shared_gyroX = 0.0f;
+volatile float shared_accX  = 0.0f;
 
 // Calibration data
 Gyro_Data  gyro_cal = {0.0f, 0.0f, 0.0f};
@@ -443,7 +445,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       setpoint_offset = 0.0f;
       bt_command_expiry = 0;
 
-      shared_angle = tilt_angle;
+      shared_angle      = tilt_angle;
+      shared_gyroX      = gy;          
+      shared_accX       = ax;          
       shared_pid_output = 0.0f;
       shared_motor_cutoff = 1;
 
@@ -488,7 +492,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
     Motor_SetSpeed(output);
 
-    shared_angle = tilt_angle;
+    shared_angle      = tilt_angle;
+    shared_gyroX      = gy;          // ADD
+    shared_accX       = ax;          // ADD
     shared_pid_output = output;
     shared_motor_cutoff = 0;
 
@@ -616,22 +622,25 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     if (display_flag == 1) {
-      display_flag = 0;
-      float angle = shared_angle;
-      float pid = shared_pid_output;
-      uint8_t cutoff = shared_motor_cutoff;
-      float bt_off = setpoint_offset;
+    display_flag = 0;
+    float angle  = shared_angle;
+    float pid    = shared_pid_output;
+    float gx_val = shared_gyroX;
+    float ax_val = shared_accX;
+    uint8_t cutoff = shared_motor_cutoff;
 
-      int angle_int = (int)angle;
-      int angle_frac = (int)(fabsf(angle - (float)angle_int) * 10);
-      int pid_int = (int)pid;
-      int bt_off_int = (int)(bt_off * 10);  // x10 to show one decimal
+    // Encode floats as integers to avoid float-printf dependency
+    int angle_int  = (int)angle;
+    int angle_frac = (int)(fabsf(angle - (float)angle_int) * 10);
+    int gyro_x100  = (int)(gx_val * 100.0f);  // dps × 100  (2 decimal places)
+    int acc_int    = (int)(ax_val);            // mg (integer precision is fine)
+    int pid_int    = (int)pid;
 
-      // Format: angle, pid, cutoff_flag, bt_offset_x10
-      snprintf(msg, sizeof(msg), "%d.%d,%d,%u,%d\r\n",
-               angle_int, angle_frac, pid_int, cutoff, bt_off_int);
-      UART_Print(msg);
-    }
+    // Format: angle, gyroX_x100, accX, pid, cutoff
+    snprintf(msg, sizeof(msg), "%d.%d,%d,%d,%d,%u\r\n",
+             angle_int, angle_frac, gyro_x100, acc_int, pid_int, cutoff);
+    UART_Print(msg);
+}
   }
   /* USER CODE END 3 */
 }
